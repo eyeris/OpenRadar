@@ -15,9 +15,11 @@ import numpy as np
 import mmwave.dsp as dsp
 import mmwave.clustering as clu
 from mmwave.dataloader import DCA1000
-from demo.visualizer.visualize import ellipse_visualize
+from visualize import ellipse_visualize
 
 import matplotlib.pyplot as plt
+
+
 from mpl_toolkits.mplot3d import Axes3D
 
 plt.close('all')
@@ -39,8 +41,8 @@ numAngleBins = 64
 range_resolution, bandwidth = dsp.range_resolution(numADCSamples)
 doppler_resolution = dsp.doppler_resolution(bandwidth)
 
-plotRangeDopp = True  
-plot2DscatterXY = False  
+plotRangeDopp = False 
+plot2DscatterXY = True  
 plot2DscatterXZ = False  
 plot3Dscatter = False  
 plotCustomPlt = False
@@ -56,7 +58,7 @@ singFrameView = False
 
 def movieMaker(fig, ims, title, save_dir):
     import matplotlib.animation as animation
-
+    plt.rcParams['animation.ffmpeg_path'] = r"D:\Python\ffmpeg\bin\ffmpeg.exe"
     # Set up formatting for the Range Azimuth heatmap movies
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=10, metadata=dict(artist='Me'), bitrate=1800)
@@ -224,26 +226,26 @@ if __name__ == '__main__':
                 xyzVec = xyzVec[:, (np.abs(xyzVec[2]) < 1.5)]
                 xyzVecN = xyzVecN[:, (np.abs(xyzVecN[2]) < 1.5)]
                 axes[0].set_ylim(bottom=0, top=10)
-                axes[0].set_ylabel('Range')
+                axes[0].set_ylabel('Range(m)')
                 axes[0].set_xlim(left=-4, right=4)
-                axes[0].set_xlabel('Azimuth')
+                axes[0].set_xlabel('Azimuth(m)')
                 axes[0].grid(b=True)
 
                 axes[1].set_ylim(bottom=0, top=10)
                 axes[1].set_xlim(left=-4, right=4)
-                axes[1].set_xlabel('Azimuth')
+                axes[1].set_xlabel('Azimuth(m)')
                 axes[1].grid(b=True)
 
             elif plot2DscatterXZ:
                 axes[0].set_ylim(bottom=-5, top=5)
-                axes[0].set_ylabel('Elevation')
+                axes[0].set_ylabel('Azimuth(m)') 
                 axes[0].set_xlim(left=-4, right=4)
-                axes[0].set_xlabel('Azimuth')
+                axes[0].set_xlabel('Elevation(m)')
                 axes[0].grid(b=True)
 
                 axes[1].set_ylim(bottom=-5, top=5)
                 axes[1].set_xlim(left=-4, right=4)
-                axes[1].set_xlabel('Azimuth')
+                axes[1].set_xlabel('Elevation(m)')
                 axes[1].grid(b=True)
 
             if plotMakeMovie and plot2DscatterXY:
@@ -268,9 +270,9 @@ if __name__ == '__main__':
             nice.set_zlim3d(bottom=-5, top=5)
             nice.set_ylim(bottom=0, top=10)
             nice.set_xlim(left=-4, right=4)
-            nice.set_xlabel('X Label')
-            nice.set_ylabel('Y Label')
-            nice.set_zlabel('Z Label')
+            nice.set_xlabel('Azimuth(m)')
+            nice.set_ylabel('Range(m)')
+            nice.set_zlabel('Elevation(m)')
 
             ims.append((nice.scatter(xyzVec[0], xyzVec[1], xyzVec[2], c='r', marker='o', s=2),))
 
@@ -281,8 +283,8 @@ if __name__ == '__main__':
         #         ellipse_visualize(fig, cluster, detObj2D_f[:, 3:6])
         #         plt.pause(0.1)
         #         plt.clf()
-        else:
-            sys.exit("Unknown plot options.")
+        # else:
+        #     sys.exit("Unknown plot options.")
 
     if visTrigger and plotMakeMovie:
         movieMaker(fig, ims, makeMovieTitle, makeMovieDirectory)
