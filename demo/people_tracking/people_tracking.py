@@ -56,6 +56,8 @@ for frame in all_data:
 
     # --- range fft
     radar_cube = dsp.range_processing(frame)
+    print("asdfadfad")
+    print(radar_cube.shape())
 
     """ 2 (Capon Beamformer) """
 

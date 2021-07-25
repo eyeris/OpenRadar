@@ -867,7 +867,7 @@ def naive_xyz(virtual_ant, num_tx=3, num_rx=4, fft_size=64):
     elevation_ant = virtual_ant[2 * num_rx:, :]
     elevation_ant_padded = np.zeros(shape=(fft_size, num_detected_obj), dtype=np.complex_)
     # elevation_ant_padded[:len(elevation_ant)] = elevation_ant
-    elevation_ant_padded[:num_rx, :] = elevation_ant
+    elevation_ant_padded[:2*num_rx, :] = elevation_ant
 
     # Process elevation information
     elevation_fft = np.fft.fft(elevation_ant, axis=0)
