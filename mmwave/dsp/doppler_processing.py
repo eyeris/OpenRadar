@@ -96,7 +96,7 @@ def doppler_processing(radar_cube,
         detMatrix (ndarray): (numRangeBins, num_doppler_bins) complete range-dopper information. Original datatype is
                              uint16_t. Note that azimuthStaticHeatMap can be extracted from zero-doppler index for
                              visualization.
-        aoa_input (ndarray): (numRangeBins, numVirtualAntennas, num_doppler_bins) ADC data reorganized by vrx instead of
+        aoa_input (ndarray): (numRangeBins, numVirtualAntennas, 6) ADC data reorganized by vrx instead of
                              physical rx.
     """
 

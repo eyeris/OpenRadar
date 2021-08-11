@@ -20,7 +20,6 @@ def azimuth_processing(radar_cube, det_obj_2d, config, window_type_2d=None):
     """Calculate the X/Y coordinates for all detected objects.
     
     The following procedures will be performed in this function:
-
     1. Filter radarCube based on the range indices from detObj2D and optional clutter removal.
     2. Re-do windowing and 2D FFT, select associated doppler indices to form the azimuth input.
     3. Doppler compensation on the virtual antennas related to tx2. Save optional copy for near field compensation and\
@@ -146,18 +145,14 @@ def azimuth_processing(radar_cube, det_obj_2d, config, window_type_2d=None):
 
 
 """PreSense built, Python optimized AOA functions
-
 Description:
     Angle of Arrival Implementations for 1D ULA arrays along with useful helper functions
-
 Angle of Arrival Functions:
     aoa_bartlett     -- AOA function using Bartlett Method   (Beamforming Based)
     aoa_capon        -- AOA function using Capon Method      (Beamforming Based)
-
 Helper Functions:
     forward_backward_avg  --     Calculate a forward-backward averaged covariance matrix
     cov_matrix           --     Calculate the covariance of the input_data (Rxx)
-
 Constants:
     rx      = number of of antennas in the array
     chirps  = number of samples (chirps) per frame
@@ -170,23 +165,17 @@ Constants:
 def aoa_bartlett(steering_vec, sig_in, axis):
     """Perform AOA estimation using Bartlett Beamforming on a given input signal (sig_in). Make sure to specify the correct axis in (axis)
     to ensure correct matrix multiplication. The power spectrum is calculated using the following equation:
-
     .. math::
         P_{ca} (\\theta) = a^{H}(\\theta) R_{xx}^{-1} a(\\theta)
-
     This steers the beam using the steering vector as weights:
-
     .. math::
         w_{ca} (\\theta) = a(\\theta)
-
     Args:
         steering_vec (ndarray): A 2D-array of size (numTheta, num_ant) generated from gen_steering_vec
         sig_in (ndarray): Either a 2D-array or 3D-array of size (num_ant, numChirps) or (numChirps, num_vrx, num_adc_samples) respectively, containing ADC sample data sliced as described
         axis (int): Specifies the axis where the Vrx data in contained.
-
     Returns:
         doa_spectrum (ndarray): A 3D-array of size (numChirps, numThetas, numSamples)
-
     Example:
         >>> # In this example, dataIn is the input data organized as numFrames by RDC
         >>> frame = 0
@@ -200,25 +189,20 @@ def aoa_bartlett(steering_vec, sig_in, axis):
 
 def aoa_capon(x, steering_vector, magnitude=False):
     """Perform AOA estimation using Capon (MVDR) Beamforming on a rx by chirp slice
-
     Calculate the aoa spectrum via capon beamforming method using one full frame as input.
     This should be performed for each range bin to achieve AOA estimation for a full frame
     This function will calculate both the angle spectrum and corresponding Capon weights using
     the equations prescribed below.
-
     .. math::
         P_{ca} (\\theta) = \\frac{1}{a^{H}(\\theta) R_{xx}^{-1} a(\\theta)}
         
         w_{ca} (\\theta) = \\frac{R_{xx}^{-1} a(\\theta)}{a^{H}(\\theta) R_{xx}^{-1} a(\\theta)}
-
     Args:
         x (ndarray): Output of the 1d range fft with shape (num_ant, numChirps)
         steering_vector (ndarray): A 2D-array of size (numTheta, num_ant) generated from gen_steering_vec
         magnitude (bool): Azimuth theta bins should return complex data (False) or magnitude data (True). Default=False
-
     Raises:
         ValueError: steering_vector and or x are not the correct shape
-
     Returns:
         A list containing numVec and steeringVectors
         den (ndarray: A 1D-Array of size (numTheta) containing azimuth angle estimations for the given range
@@ -230,7 +214,6 @@ def aoa_capon(x, steering_vector, magnitude=False):
         >>> dataIn = np.random.rand((num_frames, num_chirps, num_vrx, num_adc_samples))
         >>> for i in range(256):
         >>>     scan_aoa_capon[i,:], _ = dss.aoa_capon(dataIn[Frame,:,:,i].T, steering_vector, magnitude=True)
-
     """
 
     if steering_vector.shape[1] != x.shape[0]:
@@ -256,10 +239,8 @@ def aoa_capon(x, steering_vector, magnitude=False):
 def cov_matrix(x):
     """ Calculates the spatial covariance matrix (Rxx) for a given set of input data (x=inputData). 
         Assumes rows denote Vrx axis.
-
     Args:
         x (ndarray): A 2D-Array with shape (rx, adc_samples) slice of the output of the 1D range fft
-
     Returns:
         Rxx (ndarray): A 2D-Array with shape (rx, rx)
     """
@@ -280,10 +261,8 @@ def cov_matrix(x):
 
 def forward_backward_avg(Rxx):
     """ Performs forward backward averaging on the given input square matrix
-
     Args:
         Rxx (ndarray): A 2D-Array square matrix containing the covariance matrix for the given input data
-
     Returns:
         R_fb (ndarray): The 2D-Array square matrix containing the forward backward averaged covariance matrix
     """
@@ -306,16 +285,13 @@ def forward_backward_avg(Rxx):
 def peak_search(doa_spectrum, peak_threshold_weight=0.251188643150958):
     """ Wrapper function to perform scipy.signal's prescribed peak search algorithm
         Tested Runtime: 45 µs ± 2.61 µs per loop (mean ± std. dev. of 7 runs, 10000 loops each)
-
     Args:
         doa_spectrum (ndarray): A 1D-Array of size (numTheta, 1) containing the theta spectrum at a given range bin
         peak_threshold_weight (float): A float specifying the desired peak declaration threshold weight to be applied
-
     Returns:
         num_max (int): The number of max points found by the algorithm
         peaks (list): List of indexes where peaks are located
         total_power (float): Total power in the current spectrum slice
-
     """
 
     peak_threshold = max(doa_spectrum) * peak_threshold_weight
@@ -328,16 +304,13 @@ def peak_search(doa_spectrum, peak_threshold_weight=0.251188643150958):
 def peak_search_full(doa_spectrum, gamma=1.2, peak_threshold_weight=0.251188643150958):
     """ Perform TI prescribed peak search algorithm
     Tested Runtime: 147 µs ± 4.27 µs per loop (mean ± std. dev. of 7 runs, 10000 loops each)
-
     Args:
         doa_spectrum (ndarray): A 1D-Array of size (numTheta, 1) containing the theta spectrum at a given range bin
         gamma (float): A float specifying the maximum/minimum wiggle necessary to qualify as a peak
         peak_threshold_weight (float): A float specifying the desired peak declaration threshold weight to be applied
-
     Returns:
         num_max (int): The number of max points found by the algorithm
         ang_est (list): List of indexes where the peaks are located
-
     """
 
     ang_est = np.zeros(4, dtype='int')
@@ -396,14 +369,12 @@ def peak_search_full(doa_spectrum, gamma=1.2, peak_threshold_weight=0.2511886431
 def peak_search_full_variance(doa_spectrum, steering_vec_size, sidelobe_level=0.251188643150958, gamma=1.2):
     """ Performs peak search (TI's full search) will retaining details about each peak including
     each peak's width, location, and value.
-
     Args:
         doa_spectrum (ndarray): a 1D numpy array containing the power spectrum generated via some aoa method (naive,
         bartlett, or capon)
         steering_vec_size (int): Size of the steering vector in terms of number of theta bins
         sidelobe_level (float): A low value threshold used to avoid sidelobe detections as peaks
         gamma (float): Weight to determine when a peak will pass as a true peak
-
     Returns:
         peak_data (ndarray): A 1D numpy array of custom data types with length numberOfPeaksDetected.
         Each detected peak is organized as [peak_location, peak_value, peak_width]
@@ -472,7 +443,6 @@ def peak_search_full_variance(doa_spectrum, steering_vec_size, sidelobe_level=0.
 def variance_estimation(num_max, est_resolution, peak_data, total_power, width_adjust_3d_b=2.5, input_snr=10000):
     """ This function will calculate an estimated variance value for each detected peak. This should
         be run after running peak_search_full_variance
-
     Args:
         num_max (int): The number of detected peaks
         est_resolution (float): The desired resolution in terms of theta
@@ -480,7 +450,6 @@ def variance_estimation(num_max, est_resolution, peak_data, total_power, width_a
         total_power (float): The total power of the spectrum
         width_adjust_3d_b (float): Constant to adjust the gamma bandwidth to 3dB level
         input_snr (int): the linear snr for the input signal samples
-
     Returns:
         est_var (ndarray): A 1D array of variances (of the peaks). The order of the peaks is preserved from peak_data
     """
@@ -497,25 +466,20 @@ def variance_estimation(num_max, est_resolution, peak_data, total_power, width_a
 
 def gen_steering_vec(ang_est_range, ang_est_resolution, num_ant):
     """Generate a steering vector for AOA estimation given the theta range, theta resolution, and number of antennas
-
     Defines a method for generating steering vector data input --Python optimized Matrix format
     The generated steering vector will span from -angEstRange to angEstRange with increments of ang_est_resolution
     The generated steering vector should be used for all further AOA estimations (bartlett/capon)
-
     Args:
         ang_est_range (int): The desired span of thetas for the angle spectrum.
         ang_est_resolution (float): The desired resolution in terms of theta
         num_ant (int): The number of Vrx antenna signals captured in the RDC
-
     Returns:
         num_vec (int): Number of vectors generated (integer divide angEstRange/ang_est_resolution)
         steering_vectors (ndarray): The generated 2D-array steering vector of size (num_vec,num_ant)
-
     Example:
         >>> #This will generate a numpy array containing the steering vector with 
         >>> #angular span from -90 to 90 in increments of 1 degree for a 4 Vrx platform
         >>> _, steering_vec = gen_steering_vec(90,1,4)
-
     """
     num_vec = (2 * ang_est_range / ang_est_resolution + 1)
     num_vec = int(round(num_vec))
@@ -534,12 +498,10 @@ def gen_steering_vec(ang_est_range, ang_est_resolution, num_ant):
 # ------------------------------- TI BEAMFORMING FUNCTIONS -------------------------------
 def aoa_estimation_bf_one_point(num_ant, sig_in, steering_vec):
     """ Calculates the total power of the given spectrum
-
     Args:
         num_ant (int): The number of virtual antennas (Vrx) being used
         sig_in (ndarray): A 2D-array of size (num_ant, numChirps) containing ADC sample data sliced for used Vrx
         steering_vec (ndarray): A 2D-array of size (numTheta, num_ant) generated from gen_steering_vec
-
     Returns:
         out_value (complex): The total power of the given input spectrum
     """
@@ -561,11 +523,9 @@ def aoa_est_bf_single_peak_det(sig_in, steering_vec):
     """Beamforming Estimate Angle of Arrival for single peak (single peak should be known a priori)
         Function call does not include variance calculations
         Function does not generate a spectrum. Rather, it only returns the array index (theta) to the highest peak
-
     Args:
         sig_in (ndarray): A 2D-array of size (num_ant, numChirps) containing ADC sample data sliced as described
         steering_vec (ndarray): A generated 2D-array steering vector of size (numVec,num_ant)
-
     Returns:
         max_index (int): Index of the theta spectrum at a given range bin that contains the max peak
     """
@@ -583,7 +543,6 @@ def aoa_est_bf_single_peak(num_ant, noise, est_resolution, sig_in, steering_vec_
     """Beamforming Estimate Angle of Arrival for single peak (single peak should be known a priori)
         Function call includes variance calculations
         Function does generate a spectrum.
-
     Args:
         num_ant (int): The number of virtual receivers in the current radar setup
         noise (float): Input noise figure
@@ -591,7 +550,6 @@ def aoa_est_bf_single_peak(num_ant, noise, est_resolution, sig_in, steering_vec_
         sig_in (ndarray): A 2D-array of size (num_ant, numChirps) containing ADC sample data sliced as described
         steering_vec_size (int): Length of the steering vector array
         steering_vec (ndarray): A generated 2D-array steering vector of size (numVec,num_ant)
-
     Returns:
         est_var (float): The estimated variance of the doa_spectrum
         max_index (int): Index of the theta spectrum at a given range bin that contains the max peak
@@ -647,7 +605,6 @@ def aoa_est_bf_single_peak(num_ant, noise, est_resolution, sig_in, steering_vec_
 # Multiple Peak Angle of Arrival Estimation -- Detection Only
 def aoa_est_bf_multi_peak_det(gamma, sidelobe_level, sig_in, steering_vec, steering_vec_size, ang_est, search=False):
     """Use Bartlett beamforming to estimate AOA for multi peak situation (a priori), no variance calculation
-
     Args:
         gamma (float): Weight to determine when a peak will pass as a true peak
         sidelobe_level (float): A low value threshold used to avoid sidelobe detections as peaks
@@ -656,7 +613,6 @@ def aoa_est_bf_multi_peak_det(gamma, sidelobe_level, sig_in, steering_vec, steer
         steering_vec_size (int): Length of the steering vector array
         ang_est (ndarray): An empty 1D numpy array that gets populated with max indexes
         search (bool): Flag that determines whether search is done to find max points
-
     Returns:
         num_max (int): The number of max points found across the theta bins at this particular range bin
         doa_spectrum (ndarray): A 1D-Array of size (numTheta, 1) containing the theta spectrum at a given range bin
@@ -746,7 +702,6 @@ def aoa_est_bf_multi_peak(gamma, sidelobe_level, width_adjust_3d_b, input_snr, e
         steering_vec_size (int): Length of the steering vector array
         peak_data (ndarray): A 2D ndarray with custom data-type that contains information on each detected point
         ang_est (ndarray): An empty 1D numpy array that gets populated with max indexes
-
     Returns:
         Tuple [ndarray, ndarray]
             1. num_max (int): The number of max values detected by search algorithm
@@ -830,24 +785,25 @@ def aoa_est_bf_multi_peak(gamma, sidelobe_level, width_adjust_3d_b, input_snr, e
 
 def naive_xyz(virtual_ant, num_tx=3, num_rx=4, fft_size=64):
     """ Estimate the phase introduced from the elevation of the elevation antennas
-
     Args:
         virtual_ant: Signal received by the rx antennas, shape = [#angleBins, #detectedObjs], zero-pad #virtualAnts to #angleBins
         num_tx: Number of transmitter antennas used
         num_rx: Number of receiver antennas used
         fft_size: Size of the fft performed on the signals
-
     Returns:
         x_vector (float): Estimated x axis coordinate in meters (m)
         y_vector (float): Estimated y axis coordinate in meters (m)
         z_vector (float): Estimated z axis coordinate in meters (m)
-
     """
     assert num_tx > 2, "need a config for more than 2 TXs"
     num_detected_obj = virtual_ant.shape[1]
 
+    print("Vistual Antenna's shape")
+    print(virtual_ant.shape)
     # Zero pad azimuth
     azimuth_ant = virtual_ant[:2 * num_rx, :]
+    print("Azimuth Antenna's shape")
+    print(azimuth_ant.shape)
     azimuth_ant_padded = np.zeros(shape=(fft_size, num_detected_obj), dtype=np.complex_)
     azimuth_ant_padded[:2 * num_rx, :] = azimuth_ant
 
@@ -865,9 +821,13 @@ def naive_xyz(virtual_ant, num_tx=3, num_rx=4, fft_size=64):
 
     # Zero pad elevation
     elevation_ant = virtual_ant[2 * num_rx:, :]
+
+    print("Elevation Antenna's shape")
+    print(elevation_ant.shape)
+
     elevation_ant_padded = np.zeros(shape=(fft_size, num_detected_obj), dtype=np.complex_)
     # elevation_ant_padded[:len(elevation_ant)] = elevation_ant
-    elevation_ant_padded[:2*num_rx, :] = elevation_ant
+    elevation_ant_padded[:num_rx, :] = elevation_ant
 
     # Process elevation information
     elevation_fft = np.fft.fft(elevation_ant, axis=0)
@@ -892,12 +852,10 @@ def beamforming_naive_mixed_xyz(azimuth_input, input_ranges, range_resolution, m
     TI xWR1843 virtual antenna map
     Row 1               8  9  10 11
     Row 2         0  1  2  3  4  5  6  7
-
     phi (ndarray):
     theta (ndarray):
     ranges (ndarray):
     xyz_vec (ndarray):
-
     Args:
         azimuth_input (ndarray): Must be a numpy array of shape (numDetections, numVrx)
         input_ranges (ndarray): Numpy array containing the rangeBins that have detections (will determine x, y, z for
@@ -907,11 +865,9 @@ def beamforming_naive_mixed_xyz(azimuth_input, input_ranges, range_resolution, m
         num_vrx (int): Number of virtual antennas in the radar platform. Default set to 12 for 1843
         est_range (int): The desired span of thetas for the angle spectrum. Used for gen_steering_vec
         est_resolution (float): The desired angular resolution for gen_steering_vec
-
     Raises:
         ValueError: If method is not one of two AOA implementations ('Capon', 'Bartlett')
         ValueError: azimuthInput's second axis should have same shape as the number of Vrx
-
     Returns:
         tuple [ndarray, ndarray, ndarray, ndarray, list]:
             1. A numpy array of shape (numDetections, ) where each element represents the elevation angle in degrees
@@ -919,7 +875,6 @@ def beamforming_naive_mixed_xyz(azimuth_input, input_ranges, range_resolution, m
             #. A numpy array of shape (numDetections, ) where each element represents the polar range in rangeBins
             #. A numpy array of shape (3, numDetections) and format: [x, y, z] where x, y, z are 1D arrays. x, y, z \
             should be in meters
-
     """
     if method not in ('Capon', 'Bartlett'):
         raise ValueError("Method argument must be 'Capon' or 'Bartlett'")

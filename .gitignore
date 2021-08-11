@@ -19,6 +19,7 @@ __pycache__/
 data/
 .DS_Store
 *.png
-
-
-
+*.npy
+*.npz
+*.pdf
+*.ply

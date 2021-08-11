@@ -45,15 +45,14 @@ CONFIG_FOOTER = 'aaee'
 ADC_PARAMS = {'chirps': 128,  # 32
               'rx': 4,
               'tx': 3,
-              'samples': 128,
+              'samples': 149,
               'IQ': 2,
               'bytes': 2}
 # STATIC
 MAX_PACKET_SIZE = 4096
 BYTES_IN_PACKET = 1456
 # DYNAMIC
-BYTES_IN_FRAME = (ADC_PARAMS['chirps'] * ADC_PARAMS['rx'] * ADC_PARAMS['tx'] *
-                  ADC_PARAMS['IQ'] * ADC_PARAMS['samples'] * ADC_PARAMS['bytes'])
+BYTES_IN_FRAME = (ADC_PARAMS['chirps'] * ADC_PARAMS['rx'] *ADC_PARAMS['tx']*ADC_PARAMS['IQ'] * ADC_PARAMS['samples'] * ADC_PARAMS['bytes'])
 BYTES_IN_FRAME_CLIPPED = (BYTES_IN_FRAME // BYTES_IN_PACKET) * BYTES_IN_PACKET
 PACKETS_IN_FRAME = BYTES_IN_FRAME / BYTES_IN_PACKET
 PACKETS_IN_FRAME_CLIPPED = BYTES_IN_FRAME // BYTES_IN_PACKET
@@ -170,7 +169,7 @@ class DCA1000:
         self.data_socket.settimeout(timeout)
 
         # Frame buffer
-        ret_frame = np.zeros(UINT16_IN_FRAME, dtype=np.uint16)
+        ret_frame = np.zeros(UINT16_IN_FRAME, dtype=np.int16)
 
         # Wait for start of next frame
         while True:
@@ -234,7 +233,7 @@ class DCA1000:
         data, addr = self.data_socket.recvfrom(MAX_PACKET_SIZE)
         packet_num = struct.unpack('<1l', data[:4])[0]
         byte_count = struct.unpack('>Q', b'\x00\x00' + data[4:10][::-1])[0]
-        packet_data = np.frombuffer(data[10:], dtype=np.uint16)
+        packet_data = np.frombuffer(data[10:], dtype=np.int16)
         return packet_num, byte_count, packet_data
 
     def _listen_for_error(self):
@@ -259,22 +258,33 @@ class DCA1000:
         return self._send_command(CMD.RECORD_STOP_CMD_CODE)
 
     @staticmethod
-    def organize(raw_frame, num_chirps, num_rx, num_samples):
+    def organize(raw_frame, num_chirps, num_rx, num_samples, num_frames=1, model='1443'):
         """Reorganizes raw ADC data into a full frame
 
         Args:
-            raw_frame (ndarray): Data to format
-            num_chirps: Number of chirps included in the frame
-            num_rx: Number of receivers used in the frame
-            num_samples: Number of ADC samples included in each chirp
+            raw_frame (ndarray): Data to format.
+            num_chirps (int): Number of chirps included in the frame.
+            num_rx (int): Number of receivers used in the frame.
+            num_samples (int): Number of ADC samples included in each chirp.
+            num_frames (int): Number of frames encoded within the data.
+            model (str): Model of the radar chip being used.
 
         Returns:
             ndarray: Reformatted frame of raw data of shape (num_chirps, num_rx, num_samples)
 
         """
-        ret = np.zeros(len(raw_frame) // 2, dtype=complex)
+        ret = np.zeros(len(raw_frame) // 2, dtype=np.complex64)
 
-        # Separate IQ data
-        ret[0::2] = raw_frame[0::4] + 1j * raw_frame[2::4]
-        ret[1::2] = raw_frame[1::4] + 1j * raw_frame[3::4]
-        return ret.reshape((num_chirps, num_rx, num_samples))
+        if model in ['1642', '1843', '6843']:
+            # Separate IQ data
+            ret[0::2] = raw_frame[0::4] + 1j * raw_frame[2::4]
+            ret[1::2] = raw_frame[1::4] + 1j * raw_frame[3::4]
+            ret = ret.reshape((num_chirps, num_rx, num_samples)) if num_frames == 1 else ret.reshape((num_frames, num_chirps, num_rx, num_samples))
+        elif model in ['1243', '1443']:
+            for rx in range(num_rx):
+                ret[rx::num_rx] = raw_frame[rx::num_rx*2] + 1j * raw_frame[rx+num_rx::num_rx*2]
+            ret = ret.reshape((num_chirps, num_samples, num_rx)).swapaxes(1, 2) if num_frames == 1 else ret.reshape((num_frames, num_chirps, num_samples, num_rx)).swapaxes(2, 3)
+        else:
+            raise ValueError(f'Model {model} is not a supported model')
+
+        return ret
